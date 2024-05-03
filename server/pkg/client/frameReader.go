@@ -8,8 +8,6 @@ import (
 	"github.com/juancortelezzi/gatorparser"
 )
 
-const BufferSize = 1024
-
 type FrameReader struct {
 	reader   io.Reader
 	previous []byte
@@ -22,7 +20,7 @@ func NewFrameReader(reader io.Reader) *FrameReader {
 	return &FrameReader{
 		reader:   reader,
 		previous: make([]byte, 0, BufferSize),
-		scratch:  make([]byte, 0, BufferSize),
+		scratch:  make([]byte, BufferSize),
 	}
 }
 

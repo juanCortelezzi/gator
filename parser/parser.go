@@ -3,9 +3,9 @@ package gatorparser
 import (
 	"encoding"
 	"encoding/binary"
+	"errors"
 	"fmt"
 	"math"
-	"slices"
 
 	"github.com/google/uuid"
 )
@@ -20,6 +20,14 @@ const (
 	PacketTypeLocation uint8 = iota
 )
 
+var (
+	ErrVersionMismatch      = errors.New("Version mismatch!")
+	ErrNotEnoughData        = errors.New("Not enough data")
+	ErrInvalidPacketType    = errors.New("Invalid packet type")
+	ErrInvalidPayloadLength = errors.New("Invalid payload length")
+	ErrInvalidField         = errors.New("Invalid field")
+)
+
 type Header struct {
 	Version uint8
 	Type    uint8
@@ -28,6 +36,25 @@ type Header struct {
 
 var _ encoding.BinaryMarshaler = &Header{}
 var _ encoding.BinaryUnmarshaler = &Header{}
+
+func NewHeader(packetType uint8) *Header {
+	// FIX: I hate this so much: there is no way that every time we
+	// create a new payload we have to change 17 lines of
+	// boilerplate code
+	var length uint8
+	switch packetType {
+	case PacketTypeLocation:
+		length = PayloadLenLocation
+	default:
+		panic(fmt.Sprintf("Invalid packet type: %d", packetType))
+	}
+
+	return &Header{
+		Version: Version,
+		Type:    packetType,
+		Length:  length,
+	}
+}
 
 func (h *Header) MarshalBinary() ([]byte, error) {
 	data := make([]byte, 0, HeaderSize)
@@ -75,26 +102,15 @@ func (h *Header) UnmarshalBinary(data []byte) error {
 	return nil
 }
 
-type PacketLocation struct {
+type PayloadLocation struct {
 	Uuid          [16]byte
 	UnixTimestamp int64
 	Latitude      float64
 	Longitude     float64
 }
 
-func (p *PacketLocation) MarshalBinary() ([]byte, error) {
-	header := &Header{
-		Version: Version,
-		Type:    PacketTypeLocation,
-		Length:  PayloadLenLocation,
-	}
-
-	data, err := header.MarshalBinary()
-	if err != nil {
-		panic(fmt.Sprintf("Error marshaling hardcoded header in PacketLocation: %v", err))
-	}
-
-	data = slices.Grow(data, int(header.Length))
+func (p *PayloadLocation) MarshalBinary() ([]byte, error) {
+	data := make([]byte, 0, PayloadLenLocation)
 
 	data = append(data, p.Uuid[:]...)
 	data = binary.BigEndian.AppendUint64(data, uint64(p.UnixTimestamp))
@@ -103,9 +119,9 @@ func (p *PacketLocation) MarshalBinary() ([]byte, error) {
 
 	length := len(data)
 
-	if length != int(HeaderSize+header.Length) {
+	if length != int(PayloadLenLocation) {
 		panic(fmt.Sprintf(
-			"Invalid packet length: len=%d but expected to be %d",
+			"Invalid packet length: got len=%d but expected to be %d",
 			length,
 			HeaderSize,
 		))
@@ -114,51 +130,26 @@ func (p *PacketLocation) MarshalBinary() ([]byte, error) {
 	return data, nil
 }
 
-func (h *PacketLocation) UnmarshalBinary(data []byte) error {
-	var header Header
-	if err := header.UnmarshalBinary(data); err != nil {
-		return fmt.Errorf("Invalid header unmarshaling PacketLocation: %w", err)
-	}
-
-	if header.Length != PayloadLenLocation {
+func (h *PayloadLocation) UnmarshalBinary(data []byte) error {
+	if len(data) < int(PayloadLenLocation) {
 		return fmt.Errorf(
-			"Invalid payload length unmarshaling PacketLocation: got %d but expected %d - %w",
-			header.Length,
-			PayloadLenLocation,
-			ErrInvalidPayloadLength,
-		)
-	}
-
-	if header.Type != PacketTypeLocation {
-		return fmt.Errorf(
-			"Invalid packet type unmarshaling PacketLocation: got %d but expected %d - %w",
-			header.Type,
-			PacketTypeLocation,
-			ErrInvalidPacketType,
-		)
-	}
-
-	if len(data) < int(HeaderSize+header.Length) {
-		return fmt.Errorf(
-			"Not enough data to unmarshal PacketLocaiton: got %d but expected at least %d - %w",
+			"Not enough data to unmarshal PayloadLocation: got %d but expected at least %d - %w",
 			len(data),
-			HeaderSize+header.Length,
+			PayloadLenLocation,
 			ErrNotEnoughData,
 		)
 	}
 
-	payload := data[HeaderSize : HeaderSize+header.Length]
-
-	rawId, payload := payload[:16], payload[16:]
+	rawId, data := data[:16], data[16:]
 	id, err := uuid.FromBytes(rawId)
 	if err != nil {
 		return fmt.Errorf("Invalid field Uuid unmarshaling PacketLocation: %w", err)
 	}
 
-	rawUnixTimestamp, payload := payload[:8], payload[8:]
+	rawUnixTimestamp, data := data[:8], data[8:]
 	unixTimestamp := int64(binary.BigEndian.Uint64(rawUnixTimestamp))
 
-	rawLat, rawLng := payload[:8], payload[8:]
+	rawLat, rawLng := data[:8], data[8:]
 	lat := math.Float64frombits(binary.BigEndian.Uint64(rawLat))
 	lng := math.Float64frombits(binary.BigEndian.Uint64(rawLng))
 

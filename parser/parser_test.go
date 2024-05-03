@@ -18,14 +18,14 @@ func TestUnix(t *testing.T) {
 	}
 }
 
-func TestPacketHeaderMarshaling(t *testing.T) {
-	header := &gatorparser.Header{
+func TestHeaderMarshaling(t *testing.T) {
+	originalHeader := &gatorparser.Header{
 		Version: 1,
 		Type:    5,
 		Length:  40,
 	}
 
-	data, err := header.MarshalBinary()
+	data, err := originalHeader.MarshalBinary()
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -35,50 +35,50 @@ func TestPacketHeaderMarshaling(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	if header.Version != parsedHeader.Version {
-		t.Fatalf("Version mismatch: %d != %d", header.Version, parsedHeader.Version)
+	if originalHeader.Version != parsedHeader.Version {
+		t.Fatalf("Version mismatch: %d != %d", originalHeader.Version, parsedHeader.Version)
 	}
 
-	if header.Type != parsedHeader.Type {
-		t.Fatalf("Type mismatch: %d != %d", header.Type, parsedHeader.Type)
+	if originalHeader.Type != parsedHeader.Type {
+		t.Fatalf("Type mismatch: %d != %d", originalHeader.Type, parsedHeader.Type)
 	}
 
-	if header.Length != parsedHeader.Length {
-		t.Fatalf("Length mismatch: %d != %d", header.Length, parsedHeader.Length)
+	if originalHeader.Length != parsedHeader.Length {
+		t.Fatalf("Length mismatch: %d != %d", originalHeader.Length, parsedHeader.Length)
 	}
 }
 
-func TestLocatorPacketMarshaling(t *testing.T) {
-	packet := gatorparser.PacketLocation{
+func TestPayloadLocationMarshaling(t *testing.T) {
+	originalPacket := gatorparser.PayloadLocation{
 		Uuid:          uuid.New(),
 		UnixTimestamp: time.Now().Unix(),
 		Latitude:      rand.Float64(),
 		Longitude:     rand.Float64(),
 	}
 
-	data, err := packet.MarshalBinary()
+	data, err := originalPacket.MarshalBinary()
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	var parsedPacket gatorparser.PacketLocation
+	var parsedPacket gatorparser.PayloadLocation
 	if err := parsedPacket.UnmarshalBinary(data); err != nil {
 		t.Fatal(err)
 	}
 
-	if packet.Uuid != parsedPacket.Uuid {
-		t.Fatalf("UUID mismatch: %s != %s", packet.Uuid, parsedPacket.Uuid)
+	if originalPacket.Uuid != parsedPacket.Uuid {
+		t.Fatalf("UUID mismatch: %s != %s", originalPacket.Uuid, parsedPacket.Uuid)
 	}
 
-	if packet.UnixTimestamp != parsedPacket.UnixTimestamp {
-		t.Fatalf("Timestamp mismatch: %d != %d", packet.UnixTimestamp, parsedPacket.UnixTimestamp)
+	if originalPacket.UnixTimestamp != parsedPacket.UnixTimestamp {
+		t.Fatalf("Timestamp mismatch: %d != %d", originalPacket.UnixTimestamp, parsedPacket.UnixTimestamp)
 	}
 
-	if packet.Latitude != parsedPacket.Latitude {
-		t.Fatalf("Latitude mismatch: %f != %f", packet.Latitude, parsedPacket.Latitude)
+	if originalPacket.Latitude != parsedPacket.Latitude {
+		t.Fatalf("Latitude mismatch: %f != %f", originalPacket.Latitude, parsedPacket.Latitude)
 	}
 
-	if packet.Longitude != parsedPacket.Longitude {
-		t.Fatalf("Longitude mismatch: %f != %f", packet.Longitude, parsedPacket.Longitude)
+	if originalPacket.Longitude != parsedPacket.Longitude {
+		t.Fatalf("Longitude mismatch: %f != %f", originalPacket.Longitude, parsedPacket.Longitude)
 	}
 }
