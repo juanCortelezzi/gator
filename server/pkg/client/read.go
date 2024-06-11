@@ -47,35 +47,46 @@ func executePacket(ctx context.Context, logger clog.Logger, conn *net.TCPConn, r
 
 	switch packetHeader.Type {
 	case gatorparser.PacketTypeLocation:
-		var packetPayload gatorparser.PayloadLocation
-		if err := packetPayload.UnmarshalBinary(rawPacket[gatorparser.HeaderSize:]); err != nil {
-			return err
-		}
-
-		logger.InfoContext(
-			ctx, "Received location",
-			"latitude", packetPayload.Latitude,
-			"longitude", packetPayload.Longitude,
-		)
-
-		headerBytes, err := packetHeader.MarshalBinary()
-		if err != nil {
-			return err
-		}
-
-		payloadBytes, err := packetPayload.MarshalBinary()
-		if err != nil {
-			return err
-		}
-
-		messageBytes := bytes.Join([][]byte{headerBytes, payloadBytes}, nil)
-		if _, err := conn.Write(messageBytes); err != nil {
-			return err
-		}
-
-		return nil
+		return executePacketLocation(ctx, logger, conn, packetHeader, rawPacket)
 	default:
 		logger.ErrorContext(ctx, "ReadPump unhandled packet due to unknown type")
 		return nil
 	}
+}
+
+func executePacketLocation(
+	ctx context.Context,
+	logger clog.Logger,
+	conn *net.TCPConn,
+	packetHeader gatorparser.Header,
+	rawPacket []byte,
+) error {
+
+	var packetPayload gatorparser.PayloadLocation
+	if err := packetPayload.UnmarshalBinary(rawPacket[gatorparser.HeaderSize:]); err != nil {
+		return err
+	}
+
+	logger.InfoContext(
+		ctx, "Received location",
+		"latitude", packetPayload.Latitude,
+		"longitude", packetPayload.Longitude,
+	)
+
+	headerBytes, err := packetHeader.MarshalBinary()
+	if err != nil {
+		return err
+	}
+
+	payloadBytes, err := packetPayload.MarshalBinary()
+	if err != nil {
+		return err
+	}
+
+	messageBytes := bytes.Join([][]byte{headerBytes, payloadBytes}, nil)
+	if _, err := conn.Write(messageBytes); err != nil {
+		return err
+	}
+
+	return nil
 }

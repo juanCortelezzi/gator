@@ -5,8 +5,8 @@ import (
 	"testing"
 	"time"
 
-	"github.com/google/uuid"
 	"github.com/juancortelezzi/gatorparser"
+	"github.com/juancortelezzi/uniqueid"
 )
 
 func TestUnix(t *testing.T) {
@@ -50,7 +50,7 @@ func TestHeaderMarshaling(t *testing.T) {
 
 func TestPayloadLocationMarshaling(t *testing.T) {
 	originalPacket := gatorparser.PayloadLocation{
-		Uuid:          uuid.New(),
+		ID:            uniqueid.Must(),
 		UnixTimestamp: time.Now().Unix(),
 		Latitude:      rand.Float64(),
 		Longitude:     rand.Float64(),
@@ -66,8 +66,8 @@ func TestPayloadLocationMarshaling(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	if originalPacket.Uuid != parsedPacket.Uuid {
-		t.Fatalf("UUID mismatch: %s != %s", originalPacket.Uuid, parsedPacket.Uuid)
+	if originalPacket.ID != parsedPacket.ID {
+		t.Fatalf("UUID mismatch: %s != %s", originalPacket.ID, parsedPacket.ID)
 	}
 
 	if originalPacket.UnixTimestamp != parsedPacket.UnixTimestamp {
